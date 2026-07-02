@@ -57,7 +57,6 @@ class SystemTray:
             "显示宠物",
             self._on_toggle_visible_menu,
             checked=lambda item: self._visible,
-            default=True,
         )
 
         menu = pystray.Menu(
@@ -89,28 +88,128 @@ class SystemTray:
             print(" 开机自启动已关闭")
 
     def _on_about(self, icon, item):
-        """点击"作者以及声明"：弹窗显示作者和免责声明"""
-        title = "作者以及声明"
-        line1 = "创作作者：爱摸鱼的YI..（以下简称\u201c作者\u201d）\n\n"
-        line2 = "免责声明：\n\n"
-        line3 = "1. 项目性质：本软件为作者个人开源项目，开发过程借助 AI 大模型辅助，免费提供用于学习与非商业用途，不构成任何服务承诺。\n\n"
-        line4 = "2. 概不担保：软件按现状封装，作者不担保其稳定性、兼容性、安全性，不保证无缺陷或适配所有环境。\n\n"
-        line5 = "3. 风险自担：使用者自行承担安装、运行、修改本软件产生的全部风险，包括系统故障、数据丢失等，作者不对任何直接或间接损失承担责任。\n\n"
-        line6 = "4. 二次开发：修改与再分发需保留本声明，衍生版本的所有责任由修改方独立承担，与原作者无关。\n\n"
-        line7 = "5. 作者有权随时终止项目维护，本声明适用中华人民共和国法律。\n\n"
-        line8 = "创作时间：2026/6/28\n"
-        line9 = "封装时间：2026/7/01"
-        msg = line1 + line2 + line3 + line4 + line5 + line6 + line7 + line8 + line9
-        # 弹窗放在新线程中运行，不阻塞托盘线程
+        """点击"作者以及声明"：弹窗显示作者图片和免责声明"""
         import threading
+        import os
+
         def _show():
             try:
-                import ctypes
-                ctypes.windll.user32.MessageBoxW(0, msg, title, 0)
+                import tkinter as tk
+                from tkinter import font as tkfont
+                from PIL import Image, ImageTk
+
+                win = tk.Tk()
+                win.title("作者以及声明")
+                win.configure(bg="#1e1e2e")
+                # 窗口大小
+                win.geometry("520x480")
+                win.resizable(False, False)
+
+                # 图片路径：用户指定的照片
+                icon_path = r"C:\Users\33183\Desktop\desktop_pet\author_icon.ico"
+
+                # 主容器
+                main = tk.Frame(win, bg="#1e1e2e")
+                main.pack(fill="both", expand=True, padx=16, pady=16)
+
+                # ===== 标题 =====
+                title_lbl = tk.Label(main, text="作者以及声明",
+                                     font=("微软雅黑", 14, "bold"),
+                                     fg="#7aa2f7", bg="#1e1e2e")
+                title_lbl.pack(anchor="w", pady=(0, 12))
+
+                # ===== 分隔线 =====
+                sep = tk.Frame(main, height=1, bg="#3b4261")
+                sep.pack(fill="x", pady=(0, 12))
+
+                # ===== 作者区域（文字+图片并排）=====
+                author_frame = tk.Frame(main, bg="#1e1e2e")
+                author_frame.pack(fill="x", pady=(0, 8))
+
+                # 左侧文字
+                text_left = tk.Frame(author_frame, bg="#1e1e2e")
+                text_left.pack(side="left", fill="both", expand=True)
+
+                author_lbl = tk.Label(text_left,
+                                      text="创作作者：爱摸鱼的YI..\n（以下简称\u201c作者\u201d）",
+                                      font=("微软雅黑", 11),
+                                      fg="#c0caf5", bg="#1e1e2e", justify="left")
+                author_lbl.pack(anchor="w")
+
+                # 右侧图片
+                if os.path.exists(icon_path):
+                    pil_img = Image.open(icon_path)
+                    pil_img = pil_img.resize((80, 80), Image.LANCZOS)
+                    tk_img = ImageTk.PhotoImage(pil_img)
+                    img_lbl = tk.Label(author_frame, image=tk_img, bg="#1e1e2e")
+                    img_lbl.image = tk_img
+                    img_lbl.pack(side="right", padx=(12, 0))
+
+                # ===== 分隔线 =====
+                sep2 = tk.Frame(main, height=1, bg="#3b4261")
+                sep2.pack(fill="x", pady=(0, 8))
+
+                # ===== 声明文本（带滚动条）=====
+                text_frame = tk.Frame(main, bg="#1e1e2e")
+                text_frame.pack(fill="both", expand=True)
+
+                scrollbar = tk.Scrollbar(text_frame)
+                scrollbar.pack(side="right", fill="y")
+
+                disclaimer = tk.Text(text_frame, wrap="word",
+                                     font=("微软雅黑", 10),
+                                     fg="#a9b1d6", bg="#16161e",
+                                     relief="flat", borderwidth=0,
+                                     padx=10, pady=10,
+                                     yscrollcommand=scrollbar.set)
+                disclaimer.pack(fill="both", expand=True)
+                scrollbar.config(command=disclaimer.yview)
+
+                msg = (
+                    "免责声明：\n\n"
+                    "1.项目性质：本软件为作者个人开源项目，开发过程借助 AI 大模型辅助，"
+                    "免费提供用于学习与非商业用途，不构成任何服务承诺。\n\n"
+                    "2.概不担保：软件按现状封装，作者不担保其稳定性、兼容性、安全性，"
+                    "不保证无缺陷或适配所有环境。\n\n"
+                    "3.风险自担：使用者自行承担安装、运行、修改本软件产生的全部风险，"
+                    "包括系统故障、数据丢失等，作者不对任何直接或间接损失承担责任。\n\n"
+                    "4.二次开发：修改与再分发需保留本声明，衍生版本的所有责任由修改方独立承担，"
+                    "与原作者无关。\n\n"
+                    "5.作者有权随时终止项目维护，本声明适用中华人民共和国法律。\n\n"
+                    "创作时间：2026/6/28\n"
+                    "封装时间：2026/7/01"
+                )
+                disclaimer.insert("1.0", msg)
+                disclaimer.config(state="disabled")
+
+                # ===== 关闭按钮 =====
+                btn_frame = tk.Frame(main, bg="#1e1e2e")
+                btn_frame.pack(fill="x", pady=(10, 0))
+
+                close_btn = tk.Button(btn_frame, text="确  定",
+                                      font=("微软雅黑", 10),
+                                      fg="#c0caf5", bg="#3b4261",
+                                      activebackground="#4a5380",
+                                      relief="flat", padx=20, pady=4,
+                                      cursor="hand2",
+                                      command=win.destroy)
+                close_btn.pack()
+
+                # 居中窗口
+                win.update_idletasks()
+                x = (win.winfo_screenwidth() - win.winfo_width()) // 2
+                y = (win.winfo_screenheight() - win.winfo_height()) // 2
+                win.geometry(f"+{x}+{y}")
+
+                win.mainloop()
+
             except Exception as e:
                 print(f"弹窗失败: {e}")
-                print(f"=== {title} ===")
-                print(msg)
+                # 降级到控制台打印
+                print("=== 作者以及声明 ===")
+                print("创作作者：爱摸鱼的YI..")
+                print("免责声明...")
+
         t = threading.Thread(target=_show, daemon=True)
         t.start()
 
@@ -122,4 +221,4 @@ class SystemTray:
     def stop(self):
         """停止托盘图标"""
         if self._icon:
-            self._ico
+            self._i

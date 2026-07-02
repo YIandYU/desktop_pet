@@ -1,7 +1,7 @@
 {
-  "pet_x": 884,
-  "pet_y": 592,
-  "state": "sleep",
+  "state": "walk",
   "monitor_panel_open": false,
-  "window_topmost": true
+  "window_topmost": true,
+  "pet_x": 1199,
+  "pet_y": 540
 }

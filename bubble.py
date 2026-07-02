@@ -60,6 +60,9 @@ class Bubble:
         self.timer = self.duration
         self.active = True
         self.text_color = (50, 50, 50)
+        # 确保字体已初始化
+        if self.font is None:
+            self.font = pygame.font.Font(None, 16)
 
     def show_text_color(self, text, color):
         """显示自定义文字（带颜色）"""

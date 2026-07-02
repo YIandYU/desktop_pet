@@ -8,7 +8,7 @@
 
 ```
 desktop_pet/
-├── main.py               # 程序主入口（窗口管理、置顶守护、事件循环）
+├── main.pyw              # 程序主入口（窗口管理、置顶守护、事件循环）
 ├── pet.py                # 宠物核心类（状态机、AI行为、交互逻辑）
 ├── pixel_sprite.py       # 钢铁侠像素精灵（7种状态 + 蓝色阴影）
 ├── hardware_monitor.py   # 硬件实时监测

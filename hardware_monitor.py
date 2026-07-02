@@ -10,6 +10,7 @@ import psutil
 import platform
 import time
 import threading
+import subprocess
 
 
 class HardwareMonitor:
@@ -123,10 +124,13 @@ class HardwareMonitor:
             try:
                 import subprocess
                 # Win32_Fan - CPU/机箱风扇
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 res = subprocess.run(
                     ['wmic', 'path', 'Win32_Fan', 'get', 'Name,DesiredSpeed',
                      '/format:csv'],
-                    capture_output=True, text=True, timeout=3
+                    capture_output=True, text=True, timeout=3,
+                    startupinfo=startupinfo
                 )
                 if res.returncode == 0:
                     for line in res.stdout.strip().split(chr(10)):
@@ -183,10 +187,13 @@ class HardwareMonitor:
         # 1. 尝试 nvidia-smi（获取 NVIDIA 使用率和显存）
         try:
             import subprocess
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             res = subprocess.run(
                 ['nvidia-smi', '--query-gpu=index,name,utilization.gpu,memory.used,memory.total,fan.speed',
                  '--format=csv,noheader,nounits'],
-                capture_output=True, text=True, timeout=2
+                capture_output=True, text=True, timeout=2,
+                startupinfo=startupinfo
             )
             if res.returncode == 0 and res.stdout.strip():
                 for line in res.stdout.strip().split(chr(10)):
@@ -210,10 +217,13 @@ class HardwareMonitor:
             try:
                 import subprocess
                 # 用 WMIC 获取显卡信息
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 res = subprocess.run(
                     ['wmic', 'path', 'win32_VideoController', 'get', 'name,adapterram',
                      '/format:csv'],
-                    capture_output=True, text=True, timeout=3
+                    capture_output=True, text=True, timeout=3,
+                    startupinfo=startupinfo
                 )
                 if res.returncode == 0 and res.stdout.strip():
                     for line in res.stdout.strip().split(chr(10)):
@@ -268,21 +278,24 @@ class HardwareMonitor:
             return ['[采集数据中...]']
 
         lines = []
-        lines.append('=== HARDWARE MONITOR ===')
+        lines.append('=== 硬件监测 ===')
 
         # 系统与运行时间
-        lines.append(f'SYS: {data.get("os", "Unknown")}')
-        lines.append(f'UPTIME: {self.format_boot_time(data.get("boot_time", 0))}')
+        lines.append(f'系统版本: {data.get("os", "Unknown")}')
+        lines.append(f'运行时长: {self.format_boot_time(data.get("boot_time", 0))}')
+
+        # 网络速度
+        lines.append(f'网络速率: {data.get("net_sent", 0):.1f}/{data.get("net_recv", 0):.1f} KB/s')
 
         # 电池
         batt = data.get('battery_percent')
         if batt is not None:
             plugged = data.get('battery_power_plugged')
-            status = 'CHARGING' if plugged else 'BATTERY'
-            lines.append(f'BATT: {batt}% {status}')
+            status = '充电中' if plugged else '放电中'
+            lines.append(f'电池电量: {batt}% {status}')
 
         # CPU
-        cpu = f'CPU: {data.get("cpu_percent", "N/A")}% ({data.get("cpu_phys", "?")}c{data.get("cpu_count", "?")}t)'
+        cpu = f'CPU占用: {data.get("cpu_percent", "N/A")}% ({data.get("cpu_phys", "?")}c{data.get("cpu_count", "?")}t)'
         lines.append(cpu)
 
         # GPU
@@ -318,23 +331,24 @@ class HardwareMonitor:
                     lines.append(f'GPU: {short_name}')
 
         # 内存
-        lines.append(f'MEM: {data.get("mem_percent", 0)}% ({data.get("mem_used", 0):.1f}/{data.get("mem_total", 0):.1f}GB)')
+        lines.append(f'内存占用: {data.get("mem_percent", 0)}% ({data.get("mem_used", 0):.1f}/{data.get("mem_total", 0):.1f}GB)')
 
         # 磁盘（显示所有盘符）
         disks = data.get('disk', [])
         if disks:
             for m in disks:
                 label = m['device']
-                lines.append(f'{label} {m["percent"]}% ({m["used"]:.0f}/{m["total"]:.0f}GB)')
-
-        # 网络速度
-        lines.append(f'NET: {data.get("net_sent", 0):.1f}/{data.get("net_recv", 0):.1f} KB/s')
+                # 提取盘符（Windows: "C:\\" → "C", Linux: "/dev/sda1" → "sda1"）
+                if ":" in label:
+                    disk_name = label.replace(":\\", "").replace(":", "")
+                else:
+                    disk_name = label.replace("/dev/", "")
+                lines.append(f'{disk_name}盘空间 {m["percent"]}% ({m["used"]:.0f}/{m["total"]:.0f}GB)')
 
         # 风扇
         fans = data.get('fans')
         if fans:
             for name, val in fans.items():
-                lines.append(f'FAN[{name}]: {val}')
-
+                lines.append(f'FAN: {val}')
 
         return lines

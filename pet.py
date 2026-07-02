@@ -58,7 +58,7 @@ class Pet:
         self.idle_timer = 0                    # 待机已持续帧数
         self.idle_threshold = random.randint(120, 300)  # 待机多久后走动（2~5秒）
         self.boredom_timer = 0                 # 无聊计时器
-        self.boredom_threshold = 60 * 60       # 无聊阈值（1分钟无交互 → 睡觉）
+        self.boredom_threshold = 5 * 60 * 60    # 无聊阈值（5分钟无交互 → 睡觉）
 
         # ----- 点击交互参数 -----
         self.click_timer = 0                   # 点击状态剩余帧数
@@ -208,7 +208,7 @@ class Pet:
 
         - 白天：待机 → 随机走动 → 待机 循环
         - 夜晚：短暂 idle 后入睡
-        - 1分钟无交互：入睡（夜晚或无聊度>阈值时）
+        - 5分钟无交互：入睡（夜晚或无聊度>阈值时）
         - 睡眠中点击唤醒，白天自动唤醒
         """
         self.idle_timer += 1
@@ -259,28 +259,27 @@ class Pet:
 
         cpu = data.get('cpu_percent')
         if cpu is not None:
-            items.append(('CPU', cpu, 50, 80, True))
+            items.append(('CPU占用：', cpu, 50, 80, True))
 
         mem = data.get('mem_percent')
         if mem is not None:
-            items.append(('MEM', mem, 50, 80, True))
+            items.append(('内存占用：', mem, 50, 80, True))
 
         batt = data.get('battery_percent')
         if batt is not None:
-            # 电池颜色规则相反：越高越绿
-            items.append(('BATT', batt, 80, 50, False))
+            items.append(('电池电量：', batt, 80, 50, False))
 
         disks = data.get('disk', [])
         if disks:
             d = disks[0]
-            items.append(('DISK', d['percent'], 50, 80, True))
+            items.append(('磁盘容量：', d['percent'], 0, 0, False))
 
         gpu = data.get('gpu')
         if gpu and gpu.get('gpus'):
             try:
                 util = float(gpu['gpus'][0].get('util', -1))
                 if util >= 0:
-                    items.append(('GPU', util, 50, 80, True))
+                    items.append(('GPU占用：', util, 50, 80, True))
             except (ValueError, TypeError):
                 pass
 
@@ -290,10 +289,15 @@ class Pet:
         name, val, low, high, lower_is_better = random.choice(items)
 
         # 确定颜色
-        if lower_is_better:
-            color = (100, 255, 100) if val < low else ((255, 200, 80) if val < high else (255, 100, 100))
+        if name == '电池容量：':
+            # 电池：>=80% 绿色 | >=50% 黄色 | <20% 红色
+            color = (100, 255, 100) if val >= 80 else ((255, 200, 80) if val >= 50 else ((255, 100, 100) if val < 20 else (255, 200, 80)))
+        elif name == '磁盘容量：':
+            # 磁盘：>80% 红色 | >50% 黄色 | <20% 绿色
+            color = (255, 100, 100) if val > 80 else ((255, 200, 80) if val > 50 else ((100, 255, 100) if val < 20 else (255, 200, 80)))
         else:
-            color = (255, 100, 100) if val < 20 else ((255, 200, 80) if val < low else ((255, 255, 100) if val < high else (100, 255, 100)))
+            # CPU/GPU/MEM：低占用绿色
+            color = (100, 255, 100) if val < low else ((255, 200, 80) if val < high else (255, 100, 100))
 
         text = f"{name} {val:.1f}%"
         self.bubble.show_text_color(text, color)
